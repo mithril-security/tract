@@ -307,12 +307,10 @@ impl<TI: LADatum> ScratchSpaceFusedNonLinear<TI> {
                     let tile_ptr = store.ptr.offset(tile_offset);
                     let tmp_d_tile =
                         std::slice::from_raw_parts_mut(*loc as *mut TI, K::mr() * K::nr());
-                    debug_assert_eq!(store.item_size, 4);
-                    // assumes TI is f32 or i32
                     for r in 0..K::mr() as isize {
                         for c in 0..K::nr() as isize {
                             let inner_offset = c * col_byte_stride + r * row_byte_stride;
-                            if inner_offset + tile_offset < 4 * store.item_count as isize {
+                            if inner_offset + tile_offset < (TI::datum_type().size_of() * store.item_count) as isize {
                                 *tmp_d_tile.get_unchecked_mut(r as usize + c as usize * K::mr()) =
                                     *(tile_ptr.offset(inner_offset) as *const TI);
                             }

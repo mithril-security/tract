@@ -1,5 +1,8 @@
-use crate::frame::mmm::*;
+use tract_data::prelude::f16;
+use num_traits::Float;
+use num_traits::AsPrimitive;
 
+use crate::frame::mmm::*;
 pub trait ScaleShiftAndRound {
     fn q_scale(self, mult: i32, shift: usize, policy: RoundingPolicy) -> Self;
 }
@@ -7,6 +10,14 @@ pub trait ScaleShiftAndRound {
 impl ScaleShiftAndRound for f32 {
     fn q_scale(self, mult: i32, shift: usize, _policy: RoundingPolicy) -> Self {
         self * mult as f32 * 2. * 2f32.powi(-(shift as i32))
+    }
+}
+
+impl ScaleShiftAndRound for f16 {
+    fn q_scale(self, mult: i32, shift: usize, _policy: RoundingPolicy) -> Self {
+        let two:f16 = 2f32.as_();
+        let mult: f16 = mult.as_();
+        self * mult * two * two.powi(-(shift as i32))
     }
 }
 
