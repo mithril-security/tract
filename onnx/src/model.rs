@@ -175,7 +175,7 @@ impl<'a> ParsingContext<'a> {
             let mut fact = InferenceFact::default();
             if !self.framework.ignore_output_shapes {
                 if let Some(f) = output.r#type.as_ref().and_then(|t| t.value.as_ref()) {
-                    let pb::type_proto::Value::TensorType(f) = f;
+                    let f = if let pb::type_proto::Value::TensorType(f) = f { f } else { bail!("Non tensor values not supported") };
                     fact = f.try_into()?
                 };
             }
