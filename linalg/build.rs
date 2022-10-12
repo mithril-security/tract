@@ -260,6 +260,10 @@ fn strip_comments(s: String, msvc: bool) -> String {
     }
 }
 
+fn is_target_sgx() -> bool {
+    var("CARGO_CFG_TARGET_VENDOR") == "fortanix" && var("CARGO_CFG_TARGET_ENV") == "sgx"
+}
+
 fn preprocess_file(
     template: impl AsRef<path::Path>,
     output: impl AsRef<path::Path>,
@@ -268,24 +272,41 @@ fn preprocess_file(
     needs_pragma: bool,
 ) {
     println!("cargo:rerun-if-changed={}", template.as_ref().to_string_lossy());
-    let family = var("CARGO_CFG_TARGET_FAMILY");
-    let os = var("CARGO_CFG_TARGET_OS");
-    // We also check to see if we're on a windows host, if we aren't, we won't be
-    // able to use the Microsoft assemblers,
-    let msvc = use_masm();
-    println!("cargo:rerun-if-changed={}", template.as_ref().to_string_lossy());
+    let (family, os, msvc, l, long, g): (
+        String,
+        String,
+        bool,
+        String,
+        &'static str,
+        &'static str,
+    );
     let mut input = fs::read_to_string(&template).unwrap();
-    input = strip_comments(input, msvc);
-    let l = if os == "macos" {
-        "L"
-    } else if family == "windows" {
-        ""
+    if !is_target_sgx() {
+        family = var("CARGO_CFG_TARGET_FAMILY");
+        os = var("CARGO_CFG_TARGET_OS");
+        // We also check to see if we're on a windows host, if we aren't, we won't be
+        // able to use the Microsoft assemblers,
+        msvc = use_masm();
+        println!("cargo:rerun-if-changed={}", template.as_ref().to_string_lossy());
+        input = strip_comments(input, msvc);
+        l = if os == "macos" {
+            "L"
+        } else if family == "windows" {
+            ""
+        } else {
+            "."
+        }
+        .to_owned();
+        long = if msvc { "dd" } else { ".long" };
+        g = if os == "macos" || os == "ios" { "_" } else { "" };
     } else {
-        "."
+        family = "unix".to_string();
+        os = "linux".to_string();
+        msvc = false;
+        l = ".".to_owned();
+        long = ".long";
+        g = "";
     }
-    .to_owned();
-    let long = if msvc { "dd" } else { ".long" };
-    let g = if os == "macos" || os == "ios" { "_" } else { "" };
     let mut globals = liquid::object!({
         "msvc": msvc,
         "needs_pragma": needs_pragma,
