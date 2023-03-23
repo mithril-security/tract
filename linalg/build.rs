@@ -273,6 +273,7 @@ fn preprocess_file(
     needs_pragma: bool,
 ) {
     println!("cargo:rerun-if-changed={}", template.as_ref().to_string_lossy());
+    let mut input = fs::read_to_string(&template).unwrap();
     let (family, os, msvc, l, long, g): (
         String,
         String,
@@ -281,7 +282,6 @@ fn preprocess_file(
         &'static str,
         &'static str,
     );
-    let mut input = fs::read_to_string(&template).unwrap();
     if !is_target_sgx() {
         family = var("CARGO_CFG_TARGET_FAMILY");
         os = var("CARGO_CFG_TARGET_OS");
@@ -300,7 +300,8 @@ fn preprocess_file(
         .to_owned();
         long = if msvc { "dd" } else { ".long" };
         g = if os == "macos" || os == "ios" { "_" } else { "" };
-    } else {
+    }
+    else {
         family = "unix".to_string();
         os = "linux".to_string();
         msvc = false;
@@ -308,6 +309,8 @@ fn preprocess_file(
         long = ".long";
         g = "";
     }
+    // note: use .align with bytes instead of p2align since they both use direct bytes.
+    let align = if msvc { "align" } else { ".align" };
     let mut globals = liquid::object!({
         "msvc": msvc,
         "needs_pragma": needs_pragma,
@@ -318,20 +321,22 @@ fn preprocess_file(
         "suffix": suffix,
         "long": long,
         "jump_table": jump_table(),
+        "align": align,
     });
     for (k, v) in variants {
         globals.insert(k.to_string().into(), liquid::model::Value::scalar(*v));
     }
     let partials = load_partials(template.as_ref().parent().unwrap(), msvc);
-    if let Err(e) = liquid::ParserBuilder::with_stdlib()
+    let parser = liquid::ParserBuilder::with_stdlib()
         .partials(liquid::partials::LazyCompiler::new(partials))
-        .filter(F16)
+        .filter(F16);
+    if let Err(e) = parser
         .build()
-        .and_then(|p| p.parse(&*input))
+        .and_then(|p| p.parse(&input))
         .and_then(|r| r.render_to(&mut fs::File::create(&output).unwrap(), &globals))
     {
         eprintln!("Processing {}", template.as_ref().to_string_lossy());
-        eprintln!("{}", e);
+        eprintln!("{e}");
         panic!()
     }
 }
