@@ -34,3 +34,6 @@
 
 	vfmadd231ps		ymm10,	 ymm12, ymm15
 	vfmadd231ps		ymm11,	 ymm13, ymm15
+
+	add rax, 64
+	add rcx, 24

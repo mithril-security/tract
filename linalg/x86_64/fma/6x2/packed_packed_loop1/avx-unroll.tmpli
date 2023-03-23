@@ -65,3 +65,6 @@
 
 	vfmadd231ps     ymm5,   ymm13, ymm14
     vfmadd231ps     ymm11, 	ymm13, ymm15
+
+	add rax, 384
+	add rcx, 16

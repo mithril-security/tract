@@ -33,6 +33,6 @@ fma_mmm_f32_{{size}}_{{suffix}} endp
 _text ends
 end
 
-{% else %} 
+{% else %}
 .cfi_endproc
 {% endif %}

@@ -78,7 +78,8 @@ fn main() {
 
     match arch.as_ref() {
         "x86_64" => {
-            let files = preprocess_files("x86_64/fma", &[], &suffix, false);
+            let mut files = preprocess_files("x86_64/fma", &[], &suffix, false);
+            files.extend(preprocess_files("x86_64/avx512", &[], &suffix, false));
 
             match os.as_ref() {
                 "windows" => {
